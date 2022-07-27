@@ -1,5 +1,6 @@
 package com.huawei.audiodevicekit.bluetoothsample.view;
 
+import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.hardware.Sensor;
@@ -17,6 +18,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -125,6 +127,8 @@ public class SampleBtActivity
         simpleAdapter = new SimpleAdapter(this, maps, android.R.layout.simple_list_item_1,
             new String[] {"data"}, new int[] {android.R.id.text1});
         listView.setAdapter(simpleAdapter);
+
+        checkPermission();
     }
 
     private void initSpinner() {
@@ -303,6 +307,19 @@ public class SampleBtActivity
 
 
 
+    }
+
+    protected void checkPermission(){
+        List<String> requesList = new ArrayList<String>();
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
+            requesList.add(Manifest.permission.BLUETOOTH_SCAN);
+            requesList.add(Manifest.permission.BLUETOOTH_ADVERTISE);
+            requesList.add(Manifest.permission.BLUETOOTH_CONNECT);
+            ActivityCompat.requestPermissions(SampleBtActivity.this,
+                    requesList.toArray(new String[0]),
+                    1);
+        }
     }
 
 
