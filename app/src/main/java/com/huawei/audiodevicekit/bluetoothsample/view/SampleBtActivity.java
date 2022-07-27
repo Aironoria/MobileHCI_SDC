@@ -3,6 +3,7 @@ package com.huawei.audiodevicekit.bluetoothsample.view;
 import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.os.Build;
 import android.os.Bundle;
@@ -19,10 +20,13 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.huawei.audiobluetooth.api.Cmd;
+import com.huawei.audiobluetooth.api.data.Acc;
+import com.huawei.audiobluetooth.api.data.Gyro;
 import com.huawei.audiobluetooth.api.data.SensorData;
 import com.huawei.audiobluetooth.layer.protocol.mbb.DeviceInfo;
 import com.huawei.audiobluetooth.utils.DateUtils;
@@ -39,8 +43,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +88,12 @@ public class SampleBtActivity
     private SimpleAdapter simpleAdapter;
 
     private TextView tvDataCount;
+
+    private String fileSuffix="";
+
+    private final String ACC = "ACC";
+
+    private final String GYRO = "GYRO";
 
     @Override
     public Context getContext() {
@@ -201,7 +213,22 @@ public class SampleBtActivity
         super.setOnclick();
         btnConnect.setOnClickListener(v -> getPresenter().connect(mMac));
         btnDisconnect.setOnClickListener(v -> getPresenter().disConnect(mMac));
-        btnSendCmd.setOnClickListener(v -> getPresenter().sendCmd(mMac, mATCmd.getType()));
+//        btnSendCmd.setOnClickListener(v -> getPresenter().sendCmd(mMac, mATCmd.getType()));
+        btnSendCmd.setOnClickListener(v->{
+
+            getPresenter().sendCmd(mMac, mATCmd.getType());
+            if (mATCmd.getType() ==19){ //start
+                maps.clear();
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("_MM_dd_HH_mm_ss");// HH:mm:ss
+                Date date = new Date(System.currentTimeMillis());
+
+                fileSuffix=simpleDateFormat.format(date);
+            }
+            else if (mATCmd.getType()==20){//end
+                fileSuffix="";
+
+            }
+        });
         btnSearch.setOnClickListener(v -> getPresenter().checkLocationPermission(this));
     }
 
@@ -243,13 +270,13 @@ public class SampleBtActivity
         }
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.N)
+//    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
     public void onSensorDataChanged(SensorData sensorData) {
         runOnUiThread(() -> {
             Map<String, String> map = new HashMap<>();
             map.put("data", sensorData.toString());
-//            saveData(sensorData);
+            saveData(sensorData);
             maps.add(0, map);
             tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
             simpleAdapter.notifyDataSetChanged();
@@ -278,16 +305,29 @@ public class SampleBtActivity
 
 
     public void saveData(SensorData data){
+        if (fileSuffix.equals(""))
+            return;
+
         StringBuilder acc= new StringBuilder();
         for (int i = 0; i < data.accelDataLen; i++) {
-            acc.append(data.accelData[i].toString()).append("|");
-
+//            acc.append(data.accelData[i].toString()).append("|");
+            Acc item = data.accelData[i];
+            acc.append(item.getX()).append(",")
+                    .append(item.getY()).append(",")
+                    .append(item.getZ()).append(",\n");
         }
+
 
 
 
         StringBuilder gyro= new StringBuilder();
         for (int i = 0; i< data.getGyroDataLen();i++){
+            Gyro item = data.gyroData[i];
+            gyro.append(item.pitch).append(",")
+                    .append(item.roll).append(",")
+                    .append(item.yaw).append(",\n");
+
+
             gyro.append(data.gyroData[i].toString()).append("|");
             if (i == data.gyroDataLen-1)
                 gyro.append("\n");
@@ -295,13 +335,11 @@ public class SampleBtActivity
 
 
         if (data.accelDataLen >0){
-            acc.append("\n");
-            saveFile(acc.toString(),"acc");
+            saveFile(acc.toString(),ACC);
         }
 
         if (data.gyroDataLen>0){
-            gyro.append("\n");
-            saveFile(gyro.toString(),"gyro");
+            saveFile(gyro.toString(),GYRO);
         }
 
 
@@ -320,19 +358,40 @@ public class SampleBtActivity
                     requesList.toArray(new String[0]),
                     1);
         }
+
+
+        if (ContextCompat.checkSelfPermission(SampleBtActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager. PERMISSION_GRANTED) {
+            ActivityCompat. requestPermissions( this, new String[]{Manifest.permission. WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE },
+                    1000);
+        }
+
+
+
     }
 
 
 
-    public static void saveFile(String str, String tittle) {
+    public  void saveFile(String str, String type) {
+        String dir = "/data/data/com.huawei.audiodevicekit/data/";
+
+        dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath();
         try {
-            File file=new File("/data/data/com.huawei.audiodevicekit/data/"+tittle +".csv");
+            File file=new File(dir, type +fileSuffix +".csv");
             if (!file.exists()) {
                 file.createNewFile();
+                String head = "";
 
-//                FileOutputStream outStream = new FileOutputStream(file,true);
-//                outStream.write(str.getBytes());
-//                outStream.close();
+                switch (type){
+                    case ACC:
+                        head = "x,y,z,\n";break;
+                    case GYRO:
+                        head = "pitch,roll,yaw,\n";break;
+
+                }
+                FileOutputStream outStream = new FileOutputStream(file);
+                outStream.write(head.getBytes());
+                outStream.close();
             }
             FileOutputStream outStream = new FileOutputStream(file,true);
             outStream.write(str.getBytes());
