@@ -71,6 +71,10 @@ public class SampleBtActivity
 
     private Button btnDisconnect;
 
+    private Button btnStartRecord;
+
+    private Button btnEndRecord;
+
     private Spinner spinner;
 
     private Button btnSendCmd;
@@ -133,6 +137,8 @@ public class SampleBtActivity
         spinner = findViewById(R.id.spinner);
         btnSendCmd = findViewById(R.id.btn_send_cmd);
         rvFoundDevice = findViewById(R.id.found_device);
+        btnStartRecord =findViewById(R.id.btn_start_record);
+        btnEndRecord= findViewById(R.id.btn_end_record);
         initSpinner();
         initRecyclerView();
         maps = new ArrayList<>();
@@ -213,23 +219,28 @@ public class SampleBtActivity
         super.setOnclick();
         btnConnect.setOnClickListener(v -> getPresenter().connect(mMac));
         btnDisconnect.setOnClickListener(v -> getPresenter().disConnect(mMac));
-//        btnSendCmd.setOnClickListener(v -> getPresenter().sendCmd(mMac, mATCmd.getType()));
-        btnSendCmd.setOnClickListener(v->{
-
-            getPresenter().sendCmd(mMac, mATCmd.getType());
-            if (mATCmd.getType() ==19){ //start
-                maps.clear();
-                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("_MM_dd_HH_mm_ss");// HH:mm:ss
-                Date date = new Date(System.currentTimeMillis());
-
-                fileSuffix=simpleDateFormat.format(date);
-            }
-            else if (mATCmd.getType()==20){//end
-                fileSuffix="";
-
-            }
-        });
+        btnSendCmd.setOnClickListener(v -> getPresenter().sendCmd(mMac, mATCmd.getType()));
         btnSearch.setOnClickListener(v -> getPresenter().checkLocationPermission(this));
+
+        btnStartRecord.setOnClickListener(v->{
+            btnStartRecord.setVisibility(View.INVISIBLE);
+            btnEndRecord.setVisibility(View.VISIBLE);
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM_dd_HH_mm_ss");// HH:mm:ss
+            Date date = new Date(System.currentTimeMillis());
+            fileSuffix=simpleDateFormat.format(date);
+            maps.clear();
+            getPresenter().sendCmd(mMac, 19);
+        });
+
+        btnEndRecord.setOnClickListener(v->{
+            btnEndRecord.setVisibility(View.INVISIBLE);
+            btnStartRecord.setVisibility(View.VISIBLE);
+            getPresenter().sendCmd(mMac, 20);
+            tvSendCmdResult.setText("File saved in Download/mobileHCI/"+fileSuffix+"/");
+
+            fileSuffix="";
+
+        });
     }
 
     @Override
@@ -287,7 +298,7 @@ public class SampleBtActivity
     public void onSendCmdSuccess(Object result) {
         runOnUiThread(() -> {
             String info = DateUtils.getCurrentDate() + "\n" + result.toString();
-            tvSendCmdResult.setText(info);
+         //   tvSendCmdResult.setText(info);
         });
     }
 
@@ -377,8 +388,13 @@ public class SampleBtActivity
 
         dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath();
         try {
-            File file=new File(dir, type +fileSuffix +".csv");
+            File file=new File(dir+"/mobileHCI/"+fileSuffix+"/"+type +".csv");
+
             if (!file.exists()) {
+                File parent = file.getParentFile();
+                if (!parent.exists())
+                    parent.mkdirs();
+
                 file.createNewFile();
                 String head = "";
 
@@ -401,3 +417,8 @@ public class SampleBtActivity
         }
     }
 }
+
+//todo
+//一个按钮  开始 -> end
+
+
