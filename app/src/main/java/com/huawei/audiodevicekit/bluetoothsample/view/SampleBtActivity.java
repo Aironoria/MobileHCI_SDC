@@ -34,6 +34,7 @@ import com.huawei.audiobluetooth.utils.LocaleUtils;
 import com.huawei.audiobluetooth.utils.LogUtils;
 import com.huawei.audiodevicekit.R;
 import com.huawei.audiodevicekit.bluetoothsample.contract.SampleBtContract;
+import com.huawei.audiodevicekit.bluetoothsample.data.Label;
 import com.huawei.audiodevicekit.bluetoothsample.presenter.SampleBtPresenter;
 import com.huawei.audiodevicekit.bluetoothsample.view.adapter.SingleChoiceAdapter;
 import com.huawei.audiodevicekit.mvp.view.support.BaseAppCompatActivity;
@@ -77,6 +78,8 @@ public class SampleBtActivity
 
     private Spinner spinner;
 
+    private Spinner labelSpinner;
+
     private Button btnSendCmd;
 
     private RecyclerView rvFoundDevice;
@@ -94,6 +97,8 @@ public class SampleBtActivity
     private TextView tvDataCount;
 
     private String fileSuffix="";
+
+    private String label=Label.Nothing.name();
 
     private final String ACC = "ACC";
 
@@ -138,15 +143,37 @@ public class SampleBtActivity
         btnSendCmd = findViewById(R.id.btn_send_cmd);
         rvFoundDevice = findViewById(R.id.found_device);
         btnStartRecord =findViewById(R.id.btn_start_record);
-        btnEndRecord= findViewById(R.id.btn_end_record);
-        initSpinner();
+        labelSpinner = findViewById(R.id.label_spinner);
         initRecyclerView();
+        initLabelSpinner();
         maps = new ArrayList<>();
         simpleAdapter = new SimpleAdapter(this, maps, android.R.layout.simple_list_item_1,
             new String[] {"data"}, new int[] {android.R.id.text1});
         listView.setAdapter(simpleAdapter);
 
         checkPermission();
+    }
+
+    private void initLabelSpinner() {
+        List<Map<String, String>> data = new ArrayList<>();
+        for (Label label : Label.values()) {
+            HashMap<String, String> map = new HashMap<>();
+            map.put("title",label.name());
+            data.add(map);
+        }
+        labelSpinner.setAdapter(
+                new SimpleAdapter(this, data, R.layout.item_spinner, new String[] {"title"},
+                        new int[] {R.id.tv_name}));
+        labelSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                label = data.get(position).get("title");
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
     }
 
     private void initSpinner() {
@@ -223,23 +250,19 @@ public class SampleBtActivity
         btnSearch.setOnClickListener(v -> getPresenter().checkLocationPermission(this));
 
         btnStartRecord.setOnClickListener(v->{
-            btnStartRecord.setVisibility(View.INVISIBLE);
-            btnEndRecord.setVisibility(View.VISIBLE);
-            SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM_dd_HH_mm_ss");// HH:mm:ss
-            Date date = new Date(System.currentTimeMillis());
-            fileSuffix=simpleDateFormat.format(date);
-            maps.clear();
-            getPresenter().sendCmd(mMac, 19);
-        });
-
-        btnEndRecord.setOnClickListener(v->{
-            btnEndRecord.setVisibility(View.INVISIBLE);
-            btnStartRecord.setVisibility(View.VISIBLE);
-            getPresenter().sendCmd(mMac, 20);
-            tvSendCmdResult.setText("File saved in Download/mobileHCI/"+fileSuffix+"/");
-
-            fileSuffix="";
-
+            if (fileSuffix.equals("")){
+                btnStartRecord.setText(R.string.end_record);
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM_dd_HH_mm_ss");// HH:mm:ss
+                Date date = new Date(System.currentTimeMillis());
+                fileSuffix=simpleDateFormat.format(date)+"|"+label;
+                maps.clear();
+                getPresenter().sendCmd(mMac, 19);
+            }else{
+                btnStartRecord.setText(R.string.start_record);
+                getPresenter().sendCmd(mMac, 20);
+            //    tvSendCmdResult.setText("File saved in Download/mobileHCI/"+fileSuffix+"/");
+                fileSuffix="";
+            }
         });
     }
 
@@ -298,7 +321,7 @@ public class SampleBtActivity
     public void onSendCmdSuccess(Object result) {
         runOnUiThread(() -> {
             String info = DateUtils.getCurrentDate() + "\n" + result.toString();
-         //   tvSendCmdResult.setText(info);
+            tvSendCmdResult.setText(info);
         });
     }
 

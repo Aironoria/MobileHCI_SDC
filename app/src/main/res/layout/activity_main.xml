@@ -112,39 +112,35 @@
                 android:text="@string/disconnect" />
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/ll_end_record"
-        android:layout_width="0dp"
-        android:layout_height="54dp"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/ll_disconnect">
 
-        <Button
-            android:id="@+id/btn_end_record"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:text="@string/end_record"/>
-    </LinearLayout>
+
+
     <LinearLayout
         android:id="@+id/ll_start_record"
         android:layout_width="0dp"
         android:layout_height="54dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/ll_disconnect">
+        app:layout_constraintTop_toBottomOf="@+id/ll_disconnect">
+
+        <Spinner
+            android:id="@+id/label_spinner"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_vertical" />
 
         <Button
             android:id="@+id/btn_start_record"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="match_parent"
             android:text="@string/start_record" />
     </LinearLayout>
-
 
     <LinearLayout
             android:id="@+id/ll_send_cmd"
@@ -156,7 +152,9 @@
             android:paddingEnd="8dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/ll_start_record">
+            app:layout_constraintTop_toBottomOf="@+id/ll_start_record"
+            android:visibility="gone"
+        >
 
         <Spinner
                 android:id="@+id/spinner"
