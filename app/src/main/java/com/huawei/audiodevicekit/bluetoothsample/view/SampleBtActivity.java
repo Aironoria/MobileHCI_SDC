@@ -4,7 +4,8 @@ import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.hardware.Sensor;
+import android.hardware.Sensor;import android.media.AudioManager;
+import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -129,6 +130,9 @@ public class SampleBtActivity
         return R.layout.activity_main;
     }
 
+    MediaRecorder recorder;
+    AudioManager mAudioManager;
+
     @Override
     protected void initView() {
         tvDevice = findViewById(R.id.tv_device);
@@ -152,6 +156,7 @@ public class SampleBtActivity
         listView.setAdapter(simpleAdapter);
 
         checkPermission();
+        mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);;
     }
 
     private void initLabelSpinner() {
@@ -257,9 +262,11 @@ public class SampleBtActivity
                 fileSuffix=simpleDateFormat.format(date)+"|"+label;
                 maps.clear();
                 getPresenter().sendCmd(mMac, 19);
+                start();
             }else{
                 btnStartRecord.setText(R.string.start_record);
                 getPresenter().sendCmd(mMac, 20);
+                stop();
             //    tvSendCmdResult.setText("File saved in Download/mobileHCI/"+fileSuffix+"/");
                 fileSuffix="";
             }
@@ -306,7 +313,7 @@ public class SampleBtActivity
 
 //    @RequiresApi(api = Build.VERSION_CODES.N)
     @Override
-    public void onSensorDataChanged(SensorData sensorData) {
+public void onSensorDataChanged(SensorData sensorData) {
         runOnUiThread(() -> {
             Map<String, String> map = new HashMap<>();
             map.put("data", sensorData.toString());
@@ -384,27 +391,54 @@ public class SampleBtActivity
     protected void checkPermission(){
         List<String> requesList = new ArrayList<String>();
 
+
+//        if (ContextCompat.checkSelfPermission(SampleBtActivity.this, Manifest.permission.RECORD_AUDIO)
+//                != PackageManager. PERMISSION_GRANTED) {
+//            ActivityCompat. requestPermissions( this, new String[]{Manifest.permission.RECORD_AUDIO },
+//                    2);
+//        }
+
+        requesList.add(Manifest.permission.RECORD_AUDIO);
+        requesList.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+        requesList.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
             requesList.add(Manifest.permission.BLUETOOTH_SCAN);
             requesList.add(Manifest.permission.BLUETOOTH_ADVERTISE);
             requesList.add(Manifest.permission.BLUETOOTH_CONNECT);
-            ActivityCompat.requestPermissions(SampleBtActivity.this,
-                    requesList.toArray(new String[0]),
-                    1);
+
         }
 
+        ActivityCompat.requestPermissions(SampleBtActivity.this,
+                requesList.toArray(new String[0]),
+                1);
 
-        if (ContextCompat.checkSelfPermission(SampleBtActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager. PERMISSION_GRANTED) {
-            ActivityCompat. requestPermissions( this, new String[]{Manifest.permission. WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE },
-                    1000);
-        }
+//        if (ContextCompat.checkSelfPermission(SampleBtActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+//                != PackageManager. PERMISSION_GRANTED) {
+//            ActivityCompat. requestPermissions( this, new String[]{Manifest.permission. WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE },
+//                    1000);
+//        }
 
 
 
     }
 
 
+    private File getFile(String filename) {
+        String dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath();
+        File file = new File(dir + "/mobileHCI/" + fileSuffix + "/" + filename);
+        if (!file.exists()) {
+            File parent = file.getParentFile();
+            if (!parent.exists())
+                parent.mkdirs();
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return file;
+    }
 
     public  void saveFile(String str, String type) {
         String dir = "/data/data/com.huawei.audiodevicekit/data/";
@@ -439,9 +473,54 @@ public class SampleBtActivity
             e.printStackTrace();
         }
     }
+
+
+    public void start(){
+
+        //蓝牙录音的关键，启动SCO连接，耳机话筒才起作用
+        mAudioManager.setBluetoothScoOn(true);
+        mAudioManager.stopBluetoothSco();
+        mAudioManager.startBluetoothSco();
+
+        // 创建出MediaRecorder的实例
+        recorder = new MediaRecorder();
+        // 设置recorder的输入资源(来源于麦克风,一般可以使用默认DEFAULT)
+        recorder.setAudioSource(MediaRecorder.AudioSource.UNPROCESSED);
+        // 输出格式必须要在编码格式之前设置
+        // 设置输出格式
+        recorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_WB);
+        // 设置编码的格式
+        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
+        // 设置输出文件的地址
+        recorder.setOutputFile(getFile("voice.mp3").getPath());
+        // 开始录音
+        try {
+            // 准备
+            recorder.prepare();
+            // 开始
+            recorder.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public void stop(){
+        if (mAudioManager.isBluetoothScoOn()){
+            mAudioManager.setBluetoothScoOn(false);
+            mAudioManager.stopBluetoothSco();
+        }
+        // 停止
+        if (recorder != null) {
+            // 停止
+            recorder.stop();
+            // 释放
+            recorder.release();
+            recorder = null;
+        }
+
+    }
+
 }
 
-//todo
-//一个按钮  开始 -> end
+
 
 
