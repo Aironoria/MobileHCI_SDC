@@ -4,7 +4,8 @@ import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.hardware.Sensor;import android.media.AudioManager;
+import android.hardware.Sensor;
+import android.media.AudioManager;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
@@ -25,6 +26,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.giftedcat.wavelib.view.WaveView;
 import com.huawei.audiobluetooth.api.Cmd;
 import com.huawei.audiobluetooth.api.data.Acc;
 import com.huawei.audiobluetooth.api.data.Gyro;
@@ -53,10 +55,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 
 public class SampleBtActivity
-    extends BaseAppCompatActivity<SampleBtContract.Presenter, SampleBtContract.View>
-    implements SampleBtContract.View {
+        extends BaseAppCompatActivity<SampleBtContract.Presenter, SampleBtContract.View>
+        implements SampleBtContract.View {
     private static final String TAG = "SampleBtActivity";
 
     private TextView tvDevice;
@@ -97,9 +100,9 @@ public class SampleBtActivity
 
     private TextView tvDataCount;
 
-    private String fileSuffix="";
+    private String fileSuffix = "";
 
-    private String label=Label.Nothing.name();
+    private String label = Label.Nothing.name();
 
     private final String ACC = "ACC";
 
@@ -107,7 +110,14 @@ public class SampleBtActivity
 
     private StringBuilder acc = new StringBuilder();
 
+
     private StringBuilder gyro = new StringBuilder();
+    private WaveView accWaveView1;
+    private WaveView accWaveView2;
+    private WaveView accWaveView3;
+    private WaveView gyroWaveView1;
+    private WaveView gyroWaveView2;
+    private WaveView gyroWaveView3;
 
     @Override
     public Context getContext() {
@@ -150,29 +160,45 @@ public class SampleBtActivity
         spinner = findViewById(R.id.spinner);
         btnSendCmd = findViewById(R.id.btn_send_cmd);
         rvFoundDevice = findViewById(R.id.found_device);
-        btnStartRecord =findViewById(R.id.btn_start_record);
+        btnStartRecord = findViewById(R.id.btn_start_record);
         labelSpinner = findViewById(R.id.label_spinner);
+       // initLineChart();
         initRecyclerView();
         initLabelSpinner();
         maps = new ArrayList<>();
         simpleAdapter = new SimpleAdapter(this, maps, android.R.layout.simple_list_item_1,
-            new String[] {"data"}, new int[] {android.R.id.text1});
+                new String[]{"data"}, new int[]{android.R.id.text1});
         listView.setAdapter(simpleAdapter);
 
         checkPermission();
-        mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);;
+        mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
     }
+
+    @Override
+    public void onSensorDataChanged(SensorData sensorData) {
+        runOnUiThread(() -> {
+            Map<String, String> map = new HashMap<>();
+            map.put("data", sensorData.toString());
+            processData(sensorData);
+           // drawLine(sensorData);
+            maps.add(0, map);
+            tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
+            simpleAdapter.notifyDataSetChanged();
+        });
+    }
+
 
     private void initLabelSpinner() {
         List<Map<String, String>> data = new ArrayList<>();
         for (Label label : Label.values()) {
             HashMap<String, String> map = new HashMap<>();
-            map.put("title",label.name());
+            map.put("title", label.name());
             data.add(map);
         }
         labelSpinner.setAdapter(
-                new SimpleAdapter(this, data, R.layout.item_spinner, new String[] {"title"},
-                        new int[] {R.id.tv_name}));
+                new SimpleAdapter(this, data, R.layout.item_spinner, new String[]{"title"},
+                        new int[]{R.id.tv_name}));
         labelSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -197,8 +223,8 @@ public class SampleBtActivity
             }
         }
         spinner.setAdapter(
-            new SimpleAdapter(this, data, R.layout.item_spinner, new String[] {"title"},
-                new int[] {R.id.tv_name}));
+                new SimpleAdapter(this, data, R.layout.item_spinner, new String[]{"title"},
+                        new int[]{R.id.tv_name}));
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -253,37 +279,40 @@ public class SampleBtActivity
     @Override
     protected void setOnclick() {
         super.setOnclick();
-        btnConnect.setOnClickListener(v -> getPresenter().connect(mMac));
+        btnConnect.setOnClickListener(v -> {
+            getPresenter().connect(mMac);
+        });
         btnDisconnect.setOnClickListener(v -> getPresenter().disConnect(mMac));
         btnSendCmd.setOnClickListener(v -> getPresenter().sendCmd(mMac, mATCmd.getType()));
         btnSearch.setOnClickListener(v -> getPresenter().checkLocationPermission(this));
 
-        btnStartRecord.setOnClickListener(v->{
-            if (fileSuffix.equals("")){
+        btnStartRecord.setOnClickListener(v -> {
+            if (fileSuffix.equals("")) {
+
                 btnStartRecord.setText(R.string.end_record);
                 SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM_dd_HH_mm_ss");// HH:mm:ss
                 Date date = new Date(System.currentTimeMillis());
-                fileSuffix=simpleDateFormat.format(date)+"-"+label;
+                fileSuffix = simpleDateFormat.format(date) + "-" + label;
                 maps.clear();
                 getPresenter().sendCmd(mMac, 19);
-                start();
-            }else{
+                //start();
+            } else {
                 btnStartRecord.setText(R.string.start_record);
                 getPresenter().sendCmd(mMac, 20);
-                stop();
-            //    tvSendCmdResult.setText("File saved in Download/mobileHCI/"+fileSuffix+"/");
-                saveFile(acc.toString(),ACC);
-                saveFile(gyro.toString(),GYRO);
-                acc.delete(0,acc.length());
-                gyro.delete(0,gyro.length());
-                fileSuffix="";
+                //  stop();
+                //    tvSendCmdResult.setText("File saved in Download/mobileHCI/"+fileSuffix+"/");
+                saveFile(acc.toString(), ACC);
+                saveFile(gyro.toString(), GYRO);
+                acc.delete(0, acc.length());
+                gyro.delete(0, gyro.length());
+                fileSuffix = "";
             }
         });
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-        @NonNull int[] grantResults) {
+                                           @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         getPresenter().processLocationPermissionsResult(requestCode, grantResults);
     }
@@ -294,7 +323,7 @@ public class SampleBtActivity
             return;
         }
         runOnUiThread(() -> mAdapter
-            .pushData(String.format("[%s] %s", info.getDeviceBtMac(), "HUAWEI Eyewear")));
+                .pushData(String.format("[%s] %s", info.getDeviceBtMac(), "HUAWEI Eyewear")));
     }
 
     @Override
@@ -308,29 +337,19 @@ public class SampleBtActivity
     public void onDeviceChanged(BluetoothDevice device) {
         if (tvDevice != null) {
             runOnUiThread(() -> tvDevice
-                .setText(String.format("[%s] %s", device.getAddress(), "HUAWEI Eyewear")));
+                    .setText(String.format("[%s] %s", device.getAddress(), "HUAWEI Eyewear")));
         }
     }
 
     @Override
     public void onConnectStateChanged(String stateInfo) {
         if (tvStatus != null) {
-            runOnUiThread(() -> tvStatus.setText(stateInfo));
+            runOnUiThread(() -> {
+                tvStatus.setText(stateInfo);
+            });
         }
     }
 
-//    @RequiresApi(api = Build.VERSION_CODES.N)
-    @Override
-public void onSensorDataChanged(SensorData sensorData) {
-        runOnUiThread(() -> {
-            Map<String, String> map = new HashMap<>();
-            map.put("data", sensorData.toString());
-            processData(sensorData);
-            maps.add(0, map);
-            tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
-            simpleAdapter.notifyDataSetChanged();
-        });
-    }
 
     @Override
     public void onSendCmdSuccess(Object result) {
@@ -343,7 +362,7 @@ public void onSensorDataChanged(SensorData sensorData) {
     @Override
     public void onError(String errorMsg) {
         runOnUiThread(
-            () -> Toast.makeText(SampleBtActivity.this, errorMsg, Toast.LENGTH_LONG).show());
+                () -> Toast.makeText(SampleBtActivity.this, errorMsg, Toast.LENGTH_LONG).show());
     }
 
     @Override
@@ -352,79 +371,107 @@ public void onSensorDataChanged(SensorData sensorData) {
         getPresenter().deInit();
     }
 
+    private void initLineChart() {
+        findViewById(R.id.wave_view).setVisibility(View.VISIBLE);
+        accWaveView1 = findViewById(R.id.wave_view_acc1);
+        accWaveView2 = findViewById(R.id.wave_view_acc2);
+        accWaveView3 = findViewById(R.id.wave_view_acc3);
+        gyroWaveView1 = findViewById(R.id.wave_view_gyro1);
+        gyroWaveView2 = findViewById(R.id.wave_view_gyro2);
+        gyroWaveView3 = findViewById(R.id.wave_view_gyro3);
 
-    private void processData(SensorData data){
+        accWaveView1.setMaxValue(4);
+        accWaveView2.setMaxValue(4);
+        accWaveView3.setMaxValue(4);
+
+        gyroWaveView1.setMaxValue(4000);
+        gyroWaveView2.setMaxValue(4000);
+        gyroWaveView3.setMaxValue(4000);
+
+    }
+
+
+    private void drawLine(SensorData data) {
+        if (data.accTimeStamp == 0)
+            return;
+
+        float accBase = 4096;
+        float gyroBase = 16.384f;
+        for (int i = 0; i < data.accelDataLen; i++) {
+            Acc item = data.accelData[i];
+            accWaveView1.showLine(item.x / accBase);
+            accWaveView2.showLine(item.y / accBase);
+            accWaveView3.showLine(item.z / accBase);
+        }
+
+
+        for (int i = 0; i < data.getGyroDataLen(); i++) {
+            Gyro item = data.gyroData[i];
+            gyroWaveView1.showLine(item.roll / gyroBase);
+            gyroWaveView2.showLine(item.pitch / gyroBase);
+            gyroWaveView3.showLine(item.yaw / gyroBase);
+        }
+    }
+
+    private void processDataTest(SensorData data) {
         if (fileSuffix.equals(""))
             return;
-        else if(data.accTimeStamp ==0)
+        else if (data.accTimeStamp == 0)
             return;
+        float accBase = 4096;
+        float gyroBase = 16.384f;
+        char separator = ',';
+        for (int i = 0; i < data.accelDataLen; i++) {
+            Acc item = data.accelData[i];
+            acc.append('[')
+                    .append(item.getX() / accBase).append(separator)
+                    .append(item.getY() / accBase).append(separator)
+                    .append(item.getZ() / accBase).append("\n");
+        }
 
+
+        gyro.append(data.time).append(separator);
+        for (int i = 0; i < data.getGyroDataLen(); i++) {
+            Gyro item = data.gyroData[i];
+            gyro.append('[')
+                    .append(item.pitch / gyroBase).append(separator)
+                    .append(item.roll / gyroBase).append(separator)
+                    .append(item.yaw / gyroBase).append("\n");
+        }
+    }
+
+
+    private void processData(SensorData data) {
+        if (fileSuffix.equals(""))
+            return;
+        else if (data.accTimeStamp == 0)
+            return;
+        float accBase = 4096;
+        float gyroBase = 16.384f;
         char separator = ',';
         acc.append(data.time).append(separator);
         for (int i = 0; i < data.accelDataLen; i++) {
             Acc item = data.accelData[i];
             acc.append('[')
-                    .append(item.getX()).append(" ")
-                    .append(item.getY()).append(" ")
-                    .append(item.getZ()).append("]").append(separator);
+                    .append(item.getX() / accBase).append(" ")
+                    .append(item.getY() / accBase).append(" ")
+                    .append(item.getZ() / accBase).append("]").append(separator);
         }
         acc.append('\n');
 
 
         gyro.append(data.time).append(separator);
-        for (int i = 0; i< data.getGyroDataLen();i++){
+        for (int i = 0; i < data.getGyroDataLen(); i++) {
             Gyro item = data.gyroData[i];
             gyro.append('[')
-                    .append(item.pitch).append(" ")
-                    .append(item.roll).append(" ")
-                    .append(item.yaw).append("]").append(separator);
+                    .append(item.pitch / gyroBase).append(" ")
+                    .append(item.roll / gyroBase).append(" ")
+                    .append(item.yaw / gyroBase).append("]").append(separator);
         }
         gyro.append('\n');
     }
 
-    public void saveData(SensorData data){
-        if (fileSuffix.equals(""))
-            return;
-        else if(data.accTimeStamp ==0)
-            return;
-
-        char separator = ',';
-
-        StringBuilder acc= new StringBuilder();
-        acc.append(data.accTimeStamp).append(separator);
-        for (int i = 0; i < data.accelDataLen; i++) {
-//            acc.append(data.accelData[i].toString()).append("|");
-            Acc item = data.accelData[i];
-            acc.append('[')
-                    .append(item.getX()).append(" ")
-                    .append(item.getY()).append(" ")
-                    .append(item.getZ()).append("]").append(separator);
-        }
-
-
-
-
-        StringBuilder gyro= new StringBuilder();
-        gyro.append(data.accTimeStamp).append(separator);
-
-        for (int i = 0; i< data.getGyroDataLen();i++){
-            Gyro item = data.gyroData[i];
-            gyro.append('[')
-                    .append(item.pitch).append(" ")
-                    .append(item.roll).append(" ")
-                    .append(item.yaw).append("]").append(separator);
-        }
-        acc.append('\n');
-        gyro.append('\n');
-
-        saveFile(acc.toString(),ACC);
-        saveFile(gyro.toString(),GYRO);
-
-
-
-    }
-
-    protected void checkPermission(){
+    protected void checkPermission() {
         List<String> requesList = new ArrayList<String>();
 
 
@@ -438,7 +485,7 @@ public void onSensorDataChanged(SensorData sensorData) {
         requesList.add(Manifest.permission.READ_EXTERNAL_STORAGE);
         requesList.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             requesList.add(Manifest.permission.BLUETOOTH_SCAN);
             requesList.add(Manifest.permission.BLUETOOTH_ADVERTISE);
             requesList.add(Manifest.permission.BLUETOOTH_CONNECT);
@@ -454,7 +501,6 @@ public void onSensorDataChanged(SensorData sensorData) {
 //            ActivityCompat. requestPermissions( this, new String[]{Manifest.permission. WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE },
 //                    1000);
 //        }
-
 
 
     }
@@ -476,12 +522,11 @@ public void onSensorDataChanged(SensorData sensorData) {
         return file;
     }
 
-    public  void saveFile(String str, String type) {
-        String dir = "/data/data/com.huawei.audiodevicekit/data/";
+    public void saveFile(String str, String type) {
 
-        dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath();
+        String dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getPath();
         try {
-            File file=new File(dir+"/mobileHCI/"+fileSuffix+"/"+type +".csv");
+            File file = new File(dir + "/mobileHCI/" + fileSuffix + "/" + type + ".csv");
 
             if (!file.exists()) {
                 File parent = file.getParentFile();
@@ -491,18 +536,20 @@ public void onSensorDataChanged(SensorData sensorData) {
                 file.createNewFile();
                 String head = "";
 
-                switch (type){
+                switch (type) {
                     case ACC:
-                        head = "x y z\n";break;
+                        head = "x,y,z\n";
+                        break;
                     case GYRO:
-                        head = "pitch roll yaw\n";break;
+                        head = "pitch,roll,yaw\n";
+                        break;
 
                 }
                 FileOutputStream outStream = new FileOutputStream(file);
                 outStream.write(head.getBytes());
                 outStream.close();
             }
-            FileOutputStream outStream = new FileOutputStream(file,true);
+            FileOutputStream outStream = new FileOutputStream(file, true);
             outStream.write(str.getBytes());
             outStream.close();
         } catch (Exception e) {
@@ -511,7 +558,7 @@ public void onSensorDataChanged(SensorData sensorData) {
     }
 
 
-    public void start(){
+    public void start() {
 
         //蓝牙录音的关键，启动SCO连接，耳机话筒才起作用
         mAudioManager.setBluetoothScoOn(true);
@@ -539,8 +586,9 @@ public void onSensorDataChanged(SensorData sensorData) {
             e.printStackTrace();
         }
     }
-    public void stop(){
-        if (mAudioManager.isBluetoothScoOn()){
+
+    public void stop() {
+        if (mAudioManager.isBluetoothScoOn()) {
             mAudioManager.setBluetoothScoOn(false);
             mAudioManager.stopBluetoothSco();
         }

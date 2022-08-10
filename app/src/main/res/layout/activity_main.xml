@@ -225,6 +225,7 @@
         </ScrollView>
     </LinearLayout>
 
+
     <LinearLayout
             android:id="@+id/item_notify_data"
             android:layout_width="match_parent"
@@ -251,4 +252,87 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
     </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/wave_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@+id/item_notify_data"
+        android:orientation="vertical">
+        <com.giftedcat.wavelib.view.WaveView
+            android:id="@+id/wave_view_acc1"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            app:draw_mode="normal"
+            app:grid_visible="false"
+            app:wave_line_stroke_width="5"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/item_notify_data"
+            />
+        <com.giftedcat.wavelib.view.WaveView
+            android:id="@+id/wave_view_acc2"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            app:draw_mode="normal"
+            app:grid_visible="false"
+            app:wave_line_stroke_width="5"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/wave_view_acc1"
+            />
+        <com.giftedcat.wavelib.view.WaveView
+            android:id="@+id/wave_view_acc3"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            app:draw_mode="normal"
+            app:grid_visible="false"
+            app:wave_line_stroke_width="5"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/wave_view_acc2"
+            />
+
+        <com.giftedcat.wavelib.view.WaveView
+            android:id="@+id/wave_view_gyro1"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            app:draw_mode="normal"
+            app:grid_visible="false"
+            app:wave_line_stroke_width="5"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/wave_view_acc3"
+            />
+        <com.giftedcat.wavelib.view.WaveView
+            android:id="@+id/wave_view_gyro2"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            app:draw_mode="normal"
+            app:grid_visible="false"
+            app:wave_line_stroke_width="5"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/wave_view_gyro1"
+            />
+        <com.giftedcat.wavelib.view.WaveView
+            android:id="@+id/wave_view_gyro3"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            app:draw_mode="normal"
+            app:grid_visible="false"
+            app:wave_line_stroke_width="5"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/wave_view_gyro2"
+            />
+    </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
