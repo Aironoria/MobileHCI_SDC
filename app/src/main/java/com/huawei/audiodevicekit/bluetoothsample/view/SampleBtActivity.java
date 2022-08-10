@@ -105,6 +105,10 @@ public class SampleBtActivity
 
     private final String GYRO = "GYRO";
 
+    private StringBuilder acc = new StringBuilder();
+
+    private StringBuilder gyro = new StringBuilder();
+
     @Override
     public Context getContext() {
         return this;
@@ -259,7 +263,7 @@ public class SampleBtActivity
                 btnStartRecord.setText(R.string.end_record);
                 SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM_dd_HH_mm_ss");// HH:mm:ss
                 Date date = new Date(System.currentTimeMillis());
-                fileSuffix=simpleDateFormat.format(date)+"|"+label;
+                fileSuffix=simpleDateFormat.format(date)+"-"+label;
                 maps.clear();
                 getPresenter().sendCmd(mMac, 19);
                 start();
@@ -268,6 +272,10 @@ public class SampleBtActivity
                 getPresenter().sendCmd(mMac, 20);
                 stop();
             //    tvSendCmdResult.setText("File saved in Download/mobileHCI/"+fileSuffix+"/");
+                saveFile(acc.toString(),ACC);
+                saveFile(gyro.toString(),GYRO);
+                acc.delete(0,acc.length());
+                gyro.delete(0,gyro.length());
                 fileSuffix="";
             }
         });
@@ -317,7 +325,7 @@ public void onSensorDataChanged(SensorData sensorData) {
         runOnUiThread(() -> {
             Map<String, String> map = new HashMap<>();
             map.put("data", sensorData.toString());
-            saveData(sensorData);
+            processData(sensorData);
             maps.add(0, map);
             tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
             simpleAdapter.notifyDataSetChanged();
@@ -345,44 +353,72 @@ public void onSensorDataChanged(SensorData sensorData) {
     }
 
 
+    private void processData(SensorData data){
+        if (fileSuffix.equals(""))
+            return;
+        else if(data.accTimeStamp ==0)
+            return;
+
+        char separator = ',';
+        acc.append(data.time).append(separator);
+        for (int i = 0; i < data.accelDataLen; i++) {
+            Acc item = data.accelData[i];
+            acc.append('[')
+                    .append(item.getX()).append(" ")
+                    .append(item.getY()).append(" ")
+                    .append(item.getZ()).append("]").append(separator);
+        }
+        acc.append('\n');
+
+
+        gyro.append(data.time).append(separator);
+        for (int i = 0; i< data.getGyroDataLen();i++){
+            Gyro item = data.gyroData[i];
+            gyro.append('[')
+                    .append(item.pitch).append(" ")
+                    .append(item.roll).append(" ")
+                    .append(item.yaw).append("]").append(separator);
+        }
+        gyro.append('\n');
+    }
+
     public void saveData(SensorData data){
         if (fileSuffix.equals(""))
             return;
+        else if(data.accTimeStamp ==0)
+            return;
+
+        char separator = ',';
 
         StringBuilder acc= new StringBuilder();
+        acc.append(data.accTimeStamp).append(separator);
         for (int i = 0; i < data.accelDataLen; i++) {
 //            acc.append(data.accelData[i].toString()).append("|");
             Acc item = data.accelData[i];
-            acc.append(item.getX()).append(",")
-                    .append(item.getY()).append(",")
-                    .append(item.getZ()).append(",\n");
+            acc.append('[')
+                    .append(item.getX()).append(" ")
+                    .append(item.getY()).append(" ")
+                    .append(item.getZ()).append("]").append(separator);
         }
 
 
 
 
         StringBuilder gyro= new StringBuilder();
+        gyro.append(data.accTimeStamp).append(separator);
+
         for (int i = 0; i< data.getGyroDataLen();i++){
             Gyro item = data.gyroData[i];
-            gyro.append(item.pitch).append(",")
-                    .append(item.roll).append(",")
-                    .append(item.yaw).append(",\n");
-
-
-            gyro.append(data.gyroData[i].toString()).append("|");
-            if (i == data.gyroDataLen-1)
-                gyro.append("\n");
+            gyro.append('[')
+                    .append(item.pitch).append(" ")
+                    .append(item.roll).append(" ")
+                    .append(item.yaw).append("]").append(separator);
         }
+        acc.append('\n');
+        gyro.append('\n');
 
-
-        if (data.accelDataLen >0){
-            saveFile(acc.toString(),ACC);
-        }
-
-        if (data.gyroDataLen>0){
-            saveFile(gyro.toString(),GYRO);
-        }
-
+        saveFile(acc.toString(),ACC);
+        saveFile(gyro.toString(),GYRO);
 
 
 
@@ -457,9 +493,9 @@ public void onSensorDataChanged(SensorData sensorData) {
 
                 switch (type){
                     case ACC:
-                        head = "x,y,z,\n";break;
+                        head = "x y z\n";break;
                     case GYRO:
-                        head = "pitch,roll,yaw,\n";break;
+                        head = "pitch roll yaw\n";break;
 
                 }
                 FileOutputStream outStream = new FileOutputStream(file);
