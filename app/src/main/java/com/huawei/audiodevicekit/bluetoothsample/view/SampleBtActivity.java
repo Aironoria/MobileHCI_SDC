@@ -109,9 +109,9 @@ public class SampleBtActivity
     private final String GYRO = "GYRO";
 
     private StringBuilder acc = new StringBuilder();
-
-
     private StringBuilder gyro = new StringBuilder();
+
+    private int count =0;
     private WaveView accWaveView1;
     private WaveView accWaveView2;
     private WaveView accWaveView3;
@@ -177,14 +177,25 @@ public class SampleBtActivity
 
     @Override
     public void onSensorDataChanged(SensorData sensorData) {
+
+        Map<String, String> map = new HashMap<>();
+        map.put("data", sensorData.toString());
+        processDataTest(sensorData);
+        maps.add(0, map);
+//60  ; 12
+        if (count>= 6 *10){
+            endRecord();
+        }
+
+
         runOnUiThread(() -> {
-            Map<String, String> map = new HashMap<>();
-            map.put("data", sensorData.toString());
-            processData(sensorData);
-           // drawLine(sensorData);
-            maps.add(0, map);
-            tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
-            simpleAdapter.notifyDataSetChanged();
+            // drawLine(sensorData);
+            if (count % 12 == 0){
+                tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
+            }
+
+//            simpleAdapter.notifyDataSetChanged();
+
         });
     }
 
@@ -292,20 +303,12 @@ public class SampleBtActivity
                 btnStartRecord.setText(R.string.end_record);
                 SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM_dd_HH_mm_ss");// HH:mm:ss
                 Date date = new Date(System.currentTimeMillis());
-                fileSuffix = simpleDateFormat.format(date) + "-" + label;
+                fileSuffix =label +"/" +simpleDateFormat.format(date);
                 maps.clear();
                 getPresenter().sendCmd(mMac, 19);
                 //start();
             } else {
-                btnStartRecord.setText(R.string.start_record);
-                getPresenter().sendCmd(mMac, 20);
-                //  stop();
-                //    tvSendCmdResult.setText("File saved in Download/mobileHCI/"+fileSuffix+"/");
-                saveFile(acc.toString(), ACC);
-                saveFile(gyro.toString(), GYRO);
-                acc.delete(0, acc.length());
-                gyro.delete(0, gyro.length());
-                fileSuffix = "";
+//               endRecord();
             }
         });
     }
@@ -336,8 +339,10 @@ public class SampleBtActivity
     @Override
     public void onDeviceChanged(BluetoothDevice device) {
         if (tvDevice != null) {
+//            release();
             runOnUiThread(() -> tvDevice
                     .setText(String.format("[%s] %s", device.getAddress(), "HUAWEI Eyewear")));
+
         }
     }
 
@@ -413,7 +418,7 @@ public class SampleBtActivity
         }
     }
 
-    private void processDataTest(SensorData data) {
+    private void processDataTest(SensorData data) {// one data per line
         if (fileSuffix.equals(""))
             return;
         else if (data.accTimeStamp == 0)
@@ -421,27 +426,25 @@ public class SampleBtActivity
         float accBase = 4096;
         float gyroBase = 16.384f;
         char separator = ',';
-        for (int i = 0; i < data.accelDataLen; i++) {
+
+        for (int i = 0; i < 20; i++) {
             Acc item = data.accelData[i];
-            acc.append('[')
-                    .append(item.getX() / accBase).append(separator)
+            acc.append(item.getX() / accBase).append(separator)
                     .append(item.getY() / accBase).append(separator)
                     .append(item.getZ() / accBase).append("\n");
         }
 
-
-        gyro.append(data.time).append(separator);
-        for (int i = 0; i < data.getGyroDataLen(); i++) {
+        for (int i = 0; i < 20; i++) {
             Gyro item = data.gyroData[i];
-            gyro.append('[')
-                    .append(item.pitch / gyroBase).append(separator)
+            gyro.append(item.pitch / gyroBase).append(separator)
                     .append(item.roll / gyroBase).append(separator)
                     .append(item.yaw / gyroBase).append("\n");
         }
+        count++;
     }
 
 
-    private void processData(SensorData data) {
+    private void processData(SensorData data) {//25 data per line
         if (fileSuffix.equals(""))
             return;
         else if (data.accTimeStamp == 0)
@@ -450,7 +453,7 @@ public class SampleBtActivity
         float gyroBase = 16.384f;
         char separator = ',';
         acc.append(data.time).append(separator);
-        for (int i = 0; i < data.accelDataLen; i++) {
+        for (int i = 0; i < 20; i++) {
             Acc item = data.accelData[i];
             acc.append('[')
                     .append(item.getX() / accBase).append(" ")
@@ -461,7 +464,7 @@ public class SampleBtActivity
 
 
         gyro.append(data.time).append(separator);
-        for (int i = 0; i < data.getGyroDataLen(); i++) {
+        for (int i = 0; i < 20; i++) {
             Gyro item = data.gyroData[i];
             gyro.append('[')
                     .append(item.pitch / gyroBase).append(" ")
@@ -469,6 +472,7 @@ public class SampleBtActivity
                     .append(item.yaw / gyroBase).append("]").append(separator);
         }
         gyro.append('\n');
+        count++;
     }
 
     protected void checkPermission() {
@@ -557,51 +561,23 @@ public class SampleBtActivity
         }
     }
 
-
-    public void start() {
-
-        //蓝牙录音的关键，启动SCO连接，耳机话筒才起作用
-        mAudioManager.setBluetoothScoOn(true);
-        mAudioManager.stopBluetoothSco();
-        mAudioManager.startBluetoothSco();
-
-        // 创建出MediaRecorder的实例
-        recorder = new MediaRecorder();
-        // 设置recorder的输入资源(来源于麦克风,一般可以使用默认DEFAULT)
-        recorder.setAudioSource(MediaRecorder.AudioSource.UNPROCESSED);
-        // 输出格式必须要在编码格式之前设置
-        // 设置输出格式
-        recorder.setOutputFormat(MediaRecorder.OutputFormat.AMR_WB);
-        // 设置编码的格式
-        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_WB);
-        // 设置输出文件的地址
-        recorder.setOutputFile(getFile("voice.mp3").getPath());
-        // 开始录音
-        try {
-            // 准备
-            recorder.prepare();
-            // 开始
-            recorder.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private void release(){
+        btnStartRecord.setText(R.string.start_record);
+        getPresenter().sendCmd(mMac, 20);
+    }
+    private void endRecord(){
+        release();
+        //  stop();
+        //    tvSendCmdResult.setText("File saved in Download/mobileHCI/"+fileSuffix+"/");
+        saveFile(acc.toString(), ACC);
+        saveFile(gyro.toString(), GYRO);
+        acc.delete(0, acc.length());
+        gyro.delete(0, gyro.length());
+        count=0;
+        fileSuffix = "";
     }
 
-    public void stop() {
-        if (mAudioManager.isBluetoothScoOn()) {
-            mAudioManager.setBluetoothScoOn(false);
-            mAudioManager.stopBluetoothSco();
-        }
-        // 停止
-        if (recorder != null) {
-            // 停止
-            recorder.stop();
-            // 释放
-            recorder.release();
-            recorder = null;
-        }
 
-    }
 
 }
 
