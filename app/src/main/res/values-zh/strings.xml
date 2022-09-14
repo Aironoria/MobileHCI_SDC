@@ -20,4 +20,6 @@
     <string name="unknown">未知状态 -> </string>
     <string name="start_record">开始记录</string>
     <string name="end_record">结束记录</string>
+    <string name="prediction">开始预测</string>
+    <string name="end_prediction">结束预测</string>
 </resources>

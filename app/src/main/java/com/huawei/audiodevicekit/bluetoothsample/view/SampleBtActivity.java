@@ -3,26 +3,22 @@ package com.huawei.audiodevicekit.bluetoothsample.view;
 import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
-import android.content.pm.PackageManager;
-import android.hardware.Sensor;
 import android.media.AudioManager;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -42,20 +38,20 @@ import com.huawei.audiodevicekit.bluetoothsample.presenter.SampleBtPresenter;
 import com.huawei.audiodevicekit.bluetoothsample.view.adapter.SingleChoiceAdapter;
 import com.huawei.audiodevicekit.mvp.view.support.BaseAppCompatActivity;
 
-import java.io.BufferedWriter;
+import org.pytorch.IValue;
+import org.pytorch.Tensor;
+import org.pytorch.Module;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.text.SimpleDateFormat;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Random;
 
 public class SampleBtActivity
         extends BaseAppCompatActivity<SampleBtContract.Presenter, SampleBtContract.View>
@@ -66,7 +62,6 @@ public class SampleBtActivity
 
     private TextView tvStatus;
 
-    private ListView listView;
 
     private TextView tvSendCmdResult;
 
@@ -76,7 +71,7 @@ public class SampleBtActivity
 
     private Button btnDisconnect;
 
-    private Button btnStartRecord;
+    private Button btnPrediction;
 
     private Button btnEndRecord;
 
@@ -100,6 +95,7 @@ public class SampleBtActivity
 
     private TextView tvDataCount;
 
+    private TextView tvPrediction;
     private String fileSuffix = "";
 
     private String label = Label.Nothing.name();
@@ -111,6 +107,13 @@ public class SampleBtActivity
     private StringBuilder acc = new StringBuilder();
     private StringBuilder gyro = new StringBuilder();
 
+    private int data_len = 240;
+    private float[] inputData = new float[data_len *6];
+
+    private Module model;
+    private String predictedResult;
+
+
     private int count =0;
     private WaveView accWaveView1;
     private WaveView accWaveView2;
@@ -118,6 +121,8 @@ public class SampleBtActivity
     private WaveView gyroWaveView1;
     private WaveView gyroWaveView2;
     private WaveView gyroWaveView3;
+
+
 
     @Override
     public Context getContext() {
@@ -152,7 +157,6 @@ public class SampleBtActivity
         tvDevice = findViewById(R.id.tv_device);
         tvStatus = findViewById(R.id.tv_status);
         tvDataCount = findViewById(R.id.tv_data_count);
-        listView = findViewById(R.id.listview);
         tvSendCmdResult = findViewById(R.id.tv_send_cmd_result);
         btnSearch = findViewById(R.id.btn_search);
         btnConnect = findViewById(R.id.btn_connect);
@@ -160,19 +164,46 @@ public class SampleBtActivity
         spinner = findViewById(R.id.spinner);
         btnSendCmd = findViewById(R.id.btn_send_cmd);
         rvFoundDevice = findViewById(R.id.found_device);
-        btnStartRecord = findViewById(R.id.btn_start_record);
-        labelSpinner = findViewById(R.id.label_spinner);
+        btnPrediction = findViewById(R.id.btn_prediction);
+        tvPrediction = findViewById(R.id.tv_prediction);
        // initLineChart();
         initRecyclerView();
-        initLabelSpinner();
+//        initLabelSpinner();
         maps = new ArrayList<>();
         simpleAdapter = new SimpleAdapter(this, maps, android.R.layout.simple_list_item_1,
                 new String[]{"data"}, new int[]{android.R.id.text1});
-        listView.setAdapter(simpleAdapter);
 
         checkPermission();
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
+        Log.d("FILE_PATH",new File(this.getFilesDir(), "model1.pt").getAbsolutePath());
+
+        try {
+            model = Module.load(assetFilePath(this, "model1.pt"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+    public static String assetFilePath(Context context, String assetName) throws IOException {
+        File file = new File(context.getFilesDir(), assetName);
+        if (file.exists() && file.length() > 0) {
+            return file.getAbsolutePath();
+        }
+
+        try (InputStream is = context.getAssets().open(assetName)) {
+            try (OutputStream os = new FileOutputStream(file)) {
+                byte[] buffer = new byte[4 * 1024];
+                int read;
+                while ((read = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, read);
+                }
+                os.flush();
+            }
+            return file.getAbsolutePath();
+        }
     }
 
     @Override
@@ -183,8 +214,31 @@ public class SampleBtActivity
         processDataTest(sensorData);
         maps.add(0, map);
 //60  ; 12
-        if (count>= 6 *10){
-            endRecord();
+        if (count==data_len/20){
+
+
+            Tensor input = Tensor.fromBlob(inputData,new long[]{1,6,15,16});
+            float[] a = input.getDataAsFloatArray();
+            final Tensor outputTensor = model.forward(IValue.from(input)).toTensor();
+
+            // getting tensor content as java array of floats
+            final float[] scores = outputTensor.getDataAsFloatArray();
+            Log.d("OUTPUT", Arrays.toString(scores));
+            // searching for the index with maximum score
+            float maxScore = -Float.MAX_VALUE;
+            int maxScoreIdx = -1;
+            for (int i = 0; i < scores.length; i++) {
+                if (scores[i] > maxScore) {
+                    maxScore = scores[i];
+                    maxScoreIdx = i;
+                }
+            }
+
+            String[]  labels = {"Water", "Chip", "Click", "Hamburg", "Nothing", "TripleClick", "DoubleClick"};
+            predictedResult = labels[maxScoreIdx];
+            inputData = new float[data_len *6];
+            count=0;
+
         }
 
 
@@ -194,6 +248,8 @@ public class SampleBtActivity
                 tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
             }
 
+
+            tvPrediction.setText(predictedResult);
 //            simpleAdapter.notifyDataSetChanged();
 
         });
@@ -297,18 +353,16 @@ public class SampleBtActivity
         btnSendCmd.setOnClickListener(v -> getPresenter().sendCmd(mMac, mATCmd.getType()));
         btnSearch.setOnClickListener(v -> getPresenter().checkLocationPermission(this));
 
-        btnStartRecord.setOnClickListener(v -> {
-            if (fileSuffix.equals("")) {
+        btnPrediction.setOnClickListener(v -> {
 
-                btnStartRecord.setText(R.string.end_record);
-                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM_dd_HH_mm_ss");// HH:mm:ss
-                Date date = new Date(System.currentTimeMillis());
-                fileSuffix =label +"/" +simpleDateFormat.format(date);
+            if (fileSuffix .equals("")) {
+                fileSuffix="1";
+                btnPrediction.setText(R.string.end_prediction);
                 maps.clear();
                 getPresenter().sendCmd(mMac, 19);
-                //start();
             } else {
-//               endRecord();
+                fileSuffix="";
+                release();
             }
         });
     }
@@ -419,6 +473,37 @@ public class SampleBtActivity
     }
 
     private void processDataTest(SensorData data) {// one data per line
+
+        double [] mean ={1.3677757, 1.9221729, -0.7653805, -0.07669787, 0.15376839, 0.102138355} ;
+       double[] std ={0.896893, 0.6635371, 0.802864, 0.78017575, 0.7752501, 0.7821322};
+
+        if (fileSuffix.equals(""))
+            return;
+        else if (data.accTimeStamp == 0)
+            return;
+        float accBase = 4096;
+        float gyroBase = 16.384f*1000;
+        char separator = ',';
+
+
+        //count ->12
+        for (int i = 0; i < 20; i++) {
+            Acc item = data.accelData[i];
+            inputData[count *20 +i +data_len*0] = (float) ((item.getX()/accBase - mean[0] )/std[0]);
+            inputData[count *20 +i +data_len*1] = (float) ((item.getY()/accBase - mean[1] )/std[1]);
+            inputData[count *20 +i +data_len*2] = (float) ((item.getZ()/accBase - mean[2] )/std[2]);
+        }
+
+        for (int i = 0; i < 20; i++) {
+            Gyro item = data.gyroData[i];
+            inputData[count *20 +i +data_len*3] =(float) ((item.getPitch()/gyroBase - mean[3] )/std[3]);
+            inputData[count *20 +i +data_len*4] = (float) ((item.getRoll()/gyroBase - mean[4] )/std[4]);
+            inputData[count *20 +i +data_len*5] =  (float) ((item.getYaw()/gyroBase - mean[5] )/std[5]);
+        }
+        count++;
+    }
+
+    private void processDataCollecting(SensorData data) {// one data per line
         if (fileSuffix.equals(""))
             return;
         else if (data.accTimeStamp == 0)
@@ -443,37 +528,6 @@ public class SampleBtActivity
         count++;
     }
 
-
-    private void processData(SensorData data) {//25 data per line
-        if (fileSuffix.equals(""))
-            return;
-        else if (data.accTimeStamp == 0)
-            return;
-        float accBase = 4096;
-        float gyroBase = 16.384f;
-        char separator = ',';
-        acc.append(data.time).append(separator);
-        for (int i = 0; i < 20; i++) {
-            Acc item = data.accelData[i];
-            acc.append('[')
-                    .append(item.getX() / accBase).append(" ")
-                    .append(item.getY() / accBase).append(" ")
-                    .append(item.getZ() / accBase).append("]").append(separator);
-        }
-        acc.append('\n');
-
-
-        gyro.append(data.time).append(separator);
-        for (int i = 0; i < 20; i++) {
-            Gyro item = data.gyroData[i];
-            gyro.append('[')
-                    .append(item.pitch / gyroBase).append(" ")
-                    .append(item.roll / gyroBase).append(" ")
-                    .append(item.yaw / gyroBase).append("]").append(separator);
-        }
-        gyro.append('\n');
-        count++;
-    }
 
     protected void checkPermission() {
         List<String> requesList = new ArrayList<String>();
@@ -562,7 +616,7 @@ public class SampleBtActivity
     }
 
     private void release(){
-        btnStartRecord.setText(R.string.start_record);
+        btnPrediction.setText(R.string.prediction);
         getPresenter().sendCmd(mMac, 20);
     }
     private void endRecord(){

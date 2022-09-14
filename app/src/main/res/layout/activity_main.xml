@@ -127,19 +127,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/ll_disconnect">
 
-        <Spinner
-            android:id="@+id/label_spinner"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center_vertical" />
+<!--        <Spinner-->
+<!--            android:id="@+id/label_spinner"-->
+<!--            android:layout_width="0dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_weight="1"-->
+<!--            android:gravity="center_vertical" />-->
 
         <Button
-            android:id="@+id/btn_start_record"
+            android:id="@+id/btn_prediction"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="match_parent"
-            android:text="@string/start_record" />
+            android:text="@string/prediction" />
     </LinearLayout>
 
     <LinearLayout
@@ -246,11 +246,15 @@
                 android:gravity="center"
                 android:text="@string/notify_data"
                 android:textSize="16sp" />
+        <TextView
+            android:id="@+id/tv_prediction"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text=""
+            android:textSize="60sp" />
 
-        <ListView
-                android:id="@+id/listview"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+
     </LinearLayout>
 
     <LinearLayout
