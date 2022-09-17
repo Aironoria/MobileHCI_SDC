@@ -108,7 +108,7 @@ public class SampleBtActivity
     private StringBuilder acc = new StringBuilder();
     private StringBuilder gyro = new StringBuilder();
 
-    private int data_len = 240;
+    private int data_len = 400;
     private float[] inputData = new float[data_len *6];
 
     private Module model;
@@ -178,7 +178,7 @@ public class SampleBtActivity
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         try {
-            model = LiteModuleLoader.load(assetFilePath(this, "model.ptl"));
+            model = LiteModuleLoader.load(assetFilePath(this, "model1.ptl"));
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -217,7 +217,7 @@ public class SampleBtActivity
         if (count==data_len/20){
 
 
-            Tensor input = Tensor.fromBlob(inputData,new long[]{1,6,15,16});
+            Tensor input = Tensor.fromBlob(inputData,new long[]{1,6,20,20});
             float[] a = input.getDataAsFloatArray();
             final Tensor outputTensor = model.forward(IValue.from(input)).toTensor();
             // getting tensor content as java array of floats
@@ -244,7 +244,7 @@ public class SampleBtActivity
 
         runOnUiThread(() -> {
             // drawLine(sensorData);
-            if (count % 12 == 0){
+            if (count % (data_len/20) == 0){
                 tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
             }
 
