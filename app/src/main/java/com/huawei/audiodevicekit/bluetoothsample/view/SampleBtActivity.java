@@ -190,7 +190,7 @@ public class SampleBtActivity
 
         runOnUiThread(() -> {
             // drawLine(sensorData);
-            if (count % 12 == 0){
+            if (count % 20 == 0){
                 tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
             }
 
