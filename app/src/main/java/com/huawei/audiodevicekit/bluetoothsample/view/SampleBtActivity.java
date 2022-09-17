@@ -41,6 +41,7 @@ import com.huawei.audiodevicekit.mvp.view.support.BaseAppCompatActivity;
 import org.pytorch.IValue;
 import org.pytorch.Tensor;
 import org.pytorch.Module;
+import org.pytorch.LiteModuleLoader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -176,10 +177,9 @@ public class SampleBtActivity
         checkPermission();
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
-        Log.d("FILE_PATH",new File(this.getFilesDir(), "model1.pt").getAbsolutePath());
-
         try {
-            model = Module.load(assetFilePath(this, "model1.pt"));
+            model = LiteModuleLoader.load(assetFilePath(this, "model.ptl"));
+
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -189,9 +189,9 @@ public class SampleBtActivity
 
     public static String assetFilePath(Context context, String assetName) throws IOException {
         File file = new File(context.getFilesDir(), assetName);
-        if (file.exists() && file.length() > 0) {
-            return file.getAbsolutePath();
-        }
+//        if (file.exists() && file.length() > 0) {
+//            return file.getAbsolutePath();
+//        }
 
         try (InputStream is = context.getAssets().open(assetName)) {
             try (OutputStream os = new FileOutputStream(file)) {
@@ -220,7 +220,6 @@ public class SampleBtActivity
             Tensor input = Tensor.fromBlob(inputData,new long[]{1,6,15,16});
             float[] a = input.getDataAsFloatArray();
             final Tensor outputTensor = model.forward(IValue.from(input)).toTensor();
-
             // getting tensor content as java array of floats
             final float[] scores = outputTensor.getDataAsFloatArray();
             Log.d("OUTPUT", Arrays.toString(scores));
@@ -234,8 +233,9 @@ public class SampleBtActivity
                 }
             }
 
-            String[]  labels = {"Water", "Chip", "Click", "Hamburg", "Nothing", "TripleClick", "DoubleClick"};
+            String[]  labels = {"Water", "Chip", "Hamburg", "Nothing", "TripleClick", "DoubleClick"};
             predictedResult = labels[maxScoreIdx];
+
             inputData = new float[data_len *6];
             count=0;
 
@@ -474,8 +474,8 @@ public class SampleBtActivity
 
     private void processDataTest(SensorData data) {// one data per line
 
-        double [] mean ={1.3677757, 1.9221729, -0.7653805, -0.07669787, 0.15376839, 0.102138355} ;
-       double[] std ={0.896893, 0.6635371, 0.802864, 0.78017575, 0.7752501, 0.7821322};
+        double [] mean ={-0.9608181, 0.31008407, -0.009351776, 0.0005455491, -0.023369053, -0.034882355} ;
+       double[] std ={0.029218799, 0.04372534, 0.02839355, 0.21205823, 0.31814966, 0.3167982};
 
         if (fileSuffix.equals(""))
             return;
