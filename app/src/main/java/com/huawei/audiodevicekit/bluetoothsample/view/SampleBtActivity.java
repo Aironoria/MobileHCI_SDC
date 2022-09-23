@@ -108,7 +108,7 @@ public class SampleBtActivity
     private StringBuilder acc = new StringBuilder();
     private StringBuilder gyro = new StringBuilder();
 
-    private int data_len = 400;
+    private int data_len = 380;
     private float[] inputData = new float[data_len *6];
 
     private Module model;
@@ -178,7 +178,7 @@ public class SampleBtActivity
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         try {
-            model = LiteModuleLoader.load(assetFilePath(this, "data_23_edge_output_converted.ptl"));
+            model = LiteModuleLoader.load(assetFilePath(this, "data_23_edge_output_converted_augmented.ptl"));
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -217,7 +217,7 @@ public class SampleBtActivity
         if (count==data_len/20){
 
 
-            Tensor input = Tensor.fromBlob(inputData,new long[]{1,6,20,20});
+            Tensor input = Tensor.fromBlob(inputData,new long[]{1,6,20,19});
             float[] a = input.getDataAsFloatArray();
             final Tensor outputTensor = model.forward(IValue.from(input)).toTensor();
             // getting tensor content as java array of floats
@@ -475,8 +475,8 @@ public class SampleBtActivity
 
     private void processDataTest(SensorData data) {// one data per line
 
-        double [] mean ={-0.9608181, 0.31008407, -0.009351776, 0.0005455491, -0.023369053, -0.034882355} ;
-       double[] std ={0.029218799, 0.04372534, 0.02839355, 0.21205823, 0.31814966, 0.3167982};
+        double [] mean ={-0.957993, 0.35382167, -0.0040243436, 0.009622897, 0.012073863, -0.0003459249} ;
+       double[] std ={0.02470078, 0.032860123, 0.023139982, 0.19096272, 0.25724426, 0.33188197};
 
         if (fileSuffix.equals(""))
             return;
