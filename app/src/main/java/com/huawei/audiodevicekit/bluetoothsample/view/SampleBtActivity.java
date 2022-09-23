@@ -178,7 +178,7 @@ public class SampleBtActivity
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         try {
-            model = LiteModuleLoader.load(assetFilePath(this, "model1.ptl"));
+            model = LiteModuleLoader.load(assetFilePath(this, "data_23_edge_output_converted.ptl"));
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -233,7 +233,8 @@ public class SampleBtActivity
                 }
             }
 
-            String[]  labels = {"Water", "Chip", "Hamburg", "Nothing", "TripleClick", "DoubleClick"};
+//            String[]  labels = {"Water", "Chip", "Hamburg", "Nothing", "TripleClick", "DoubleClick"};
+            String[]  labels = {"Nuggets", "DoubleClick","Hamburg","Nothing","Chew","Grind"};
             predictedResult = labels[maxScoreIdx];
 
             inputData = new float[data_len *6];
