@@ -113,6 +113,7 @@ public class SampleBtActivity
 
     private Module model;
     private String predictedResult;
+    private String last_state = "Nothing";
 
 
     private int count =0;
@@ -178,7 +179,7 @@ public class SampleBtActivity
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         try {
-            model = LiteModuleLoader.load(assetFilePath(this, "data_23_edge_output_converted_augmented.ptl"));
+            model = LiteModuleLoader.load(assetFilePath(this, "data_24_edge_output_converted_augmented.ptl"));
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -234,9 +235,27 @@ public class SampleBtActivity
             }
 
 //            String[]  labels = {"Water", "Chip", "Hamburg", "Nothing", "TripleClick", "DoubleClick"};
-            String[]  labels = {"Nuggets", "DoubleClick","Hamburg","Nothing","Chew","Grind"};
+            String[]  labels = {"Nuggets", "Hamburg","Nothing","Chew","Grind","DoubleClick"};
             predictedResult = labels[maxScoreIdx];
 
+            if (!predictedResult.equals(last_state)){
+               if( (last_state.equals("Nothing")) | predictedResult.equals("Nothing"))
+               {
+                    //do nothing
+               }
+               else if(predictedResult .equals("Chew")){
+                   if(last_state.equals("Hamburg") | last_state.equals("Nuggets")){
+                       //do nothing
+                   }else{
+                       predictedResult = "DoubleClick";
+                   }
+               }
+               else {
+                   predictedResult = last_state;
+               }
+            }
+
+            last_state =predictedResult;
             inputData = new float[data_len *6];
             count=0;
 
