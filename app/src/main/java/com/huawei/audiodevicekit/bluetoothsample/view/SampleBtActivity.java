@@ -47,6 +47,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -109,7 +110,11 @@ public class SampleBtActivity
     private StringBuilder gyro = new StringBuilder();
 
     private int data_len = 380;
-    private float[] inputData = new float[data_len *6];
+//    private float[] inputData = new float[data_len *6];
+    private ArrayDeque<Float>[] inputData = new ArrayDeque[]{
+         new ArrayDeque<Float>(), new ArrayDeque<Float>(), new ArrayDeque<Float>(),
+        new ArrayDeque<Float>(), new ArrayDeque<Float>(), new ArrayDeque<Float>()
+    };
 
     private Module model;
     private String predictedResult;
@@ -215,10 +220,14 @@ public class SampleBtActivity
         processDataTest(sensorData);
         maps.add(0, map);
 //60  ; 12
-        if (count==data_len/20){
+        Log.d("COUNT", String.valueOf(inputData[0].size()) + "  "+ String.valueOf(count));
+        if (count > data_len/20){
+            count=0;
+        }
+        if (count==data_len/40 & inputData[0].size()>=data_len){
 
 
-            Tensor input = Tensor.fromBlob(inputData,new long[]{1,6,20,19});
+            Tensor input = Tensor.fromBlob(integrateArray(inputData) ,new long[]{1,6,20,19});
             float[] a = input.getDataAsFloatArray();
             final Tensor outputTensor = model.forward(IValue.from(input)).toTensor();
             // getting tensor content as java array of floats
@@ -256,7 +265,7 @@ public class SampleBtActivity
             }
 
             last_state =predictedResult;
-            inputData = new float[data_len *6];
+//            inputData = new float[data_len *6];
             count=0;
 
         }
@@ -264,7 +273,7 @@ public class SampleBtActivity
 
         runOnUiThread(() -> {
             // drawLine(sensorData);
-            if (count % (data_len/20) == 0){
+            if (count % (data_len/40) == 0){
                 tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
             }
 
@@ -509,16 +518,17 @@ public class SampleBtActivity
         //count ->12
         for (int i = 0; i < 20; i++) {
             Acc item = data.accelData[i];
-            inputData[count *20 +i +data_len*0] = (float) ((item.getX()/accBase - mean[0] )/std[0]);
-            inputData[count *20 +i +data_len*1] = (float) ((item.getY()/accBase - mean[1] )/std[1]);
-            inputData[count *20 +i +data_len*2] = (float) ((item.getZ()/accBase - mean[2] )/std[2]);
+            addElementToDeque(inputData[0],(float) ((item.getX()/accBase - mean[0] )/std[0]));
+            addElementToDeque(inputData[1],(float) ((item.getY()/accBase - mean[1] )/std[1]));
+            addElementToDeque(inputData[2],(float) ((item.getZ()/accBase - mean[2] )/std[2]));
+
         }
 
         for (int i = 0; i < 20; i++) {
             Gyro item = data.gyroData[i];
-            inputData[count *20 +i +data_len*3] =(float) ((item.getPitch()/gyroBase - mean[3] )/std[3]);
-            inputData[count *20 +i +data_len*4] = (float) ((item.getRoll()/gyroBase - mean[4] )/std[4]);
-            inputData[count *20 +i +data_len*5] =  (float) ((item.getYaw()/gyroBase - mean[5] )/std[5]);
+            addElementToDeque(inputData[3],(float) ((item.getPitch()/gyroBase - mean[3] )/std[3]));
+            addElementToDeque(inputData[4],(float) ((item.getRoll()/gyroBase -  mean[4] )/std[4]));
+            addElementToDeque(inputData[5],(float) ((item.getYaw()/gyroBase -   mean[5] )/std[5]));
         }
         count++;
     }
@@ -651,6 +661,26 @@ public class SampleBtActivity
         fileSuffix = "";
     }
 
+    private void addElementToDeque(ArrayDeque<Float> input, Float element ){
+        if(input.size() >= data_len){
+            input.removeFirst();
+        }
+        input.add(element);
+    }
+
+
+    private  float[] integrateArray(ArrayDeque<Float>[] list){
+        ArrayDeque<Float> res= new ArrayDeque<>();
+        for (int i = 0; i<list.length; i++){
+            res.addAll(list[i]);
+        }
+        float[] res_array = new float[res.size()];
+        Float[] res_F = res.toArray(new Float[res.size()]);
+        for (int i =0; i< res.size();i++){
+            res_array[i] = res_F[i];
+        }
+        return res_array;
+    }
 
 
 }
