@@ -119,7 +119,7 @@ public class SampleBtActivity
     private Module model;
     private String predictedResult;
     private String last_state = "Nothing";
-
+    private String food= "Nothing";
 
     private int count =0;
     private WaveView accWaveView1;
@@ -247,9 +247,14 @@ public class SampleBtActivity
             String[]  labels = {"Nuggets", "Hamburg","Nothing","Chew","Grind","DoubleClick"};
             predictedResult = labels[maxScoreIdx];
 
+            if (predictedResult .equals("Hamburg") | predictedResult.equals("Nuggets")){
+                food = predictedResult;
+            }
+
+
             if (!predictedResult.equals(last_state)){
                if(last_state.equals("Hamburg") | last_state.equals("Nuggets")){
-//                   if(predictedResult.equals("CHew")){
+//                   if(predictedResult.equals("Chew")){
 //
 //                   }
 //                   predictedResult = "Chew";
