@@ -224,7 +224,7 @@ public class SampleBtActivity
         if (count > data_len/20){
             count=0;
         }
-        if (count== 8 & inputData[0].size()>=data_len){
+        if (count== 10 & inputData[0].size()>=data_len){
 
 
             Tensor input = Tensor.fromBlob(integrateArray(inputData) ,new long[]{1,6,20,19});
@@ -248,12 +248,14 @@ public class SampleBtActivity
             predictedResult = labels[maxScoreIdx];
 
             if (!predictedResult.equals(last_state)){
-               if( (last_state.equals("Nothing")) | predictedResult.equals("Nothing"))
-               {
-                    //do nothing
-//                   if (last_state.equals("Nuggets") | last_state.equals("Hamburg")){
-//                       predictedResult =last_state;
+               if(last_state.equals("Hamburg") | last_state.equals("Nuggets")){
+//                   if(predictedResult.equals("CHew")){
+//
 //                   }
+//                   predictedResult = "Chew";
+               }
+               else  if( (last_state.equals("Nothing")) | predictedResult.equals("Nothing"))
+               {
                }
 
                else {
