@@ -251,60 +251,64 @@ public class SampleBtActivity
             }
 
 //            String[]  labels = {"Water", "Chip", "Hamburg", "Nothing", "TripleClick", "DoubleClick"};
-            String[]  labels = {"Nuggets", "Speak","Hamburg",IDLE,"Chew","Grind","DoubleClick"};
+            String[]  labels =          {"Nuggets", "Speak","Hamburg",IDLE,"Chew","Grind","DoubleClick"};
+            int[] threshold = new int[]{    3      , 6      ,    3    ,  2 ,  5,      4  ,    4 };
             predictedResult = labels[maxScoreIdx];
 
-            if (predictedResult .equals("Hamburg") | predictedResult.equals("Nuggets")){
-                food = predictedResult;
+
+            int index= indexOf(labels,predictedResult);
+            label_continous_count[index]++;
+
+            if (! predictedResult.equals(last_state)){
+                label_continous_count[indexOf(labels,last_state)]--;
+                if (last_state.equals("Speak") || last_state.equals("Chew"))
+                    label_continous_count[indexOf(labels,last_state)]=0;
             }
-//            Log.d("SPEAK_COUNT", String.valueOf(speack_count));
+//            if( label_continous_count[indexOf(labels,last_state)]<0)
+//                label_continous_count[indexOf(labels,last_state)]=0;
 
-
-
-
-            if (predictedResult.equals(last_state)){
-                label_continous_count[indexOf(labels,predictedResult)]++;
-            }else {
-                label_continous_count = new int[]{0,0,0,0,0,0,0};
-            }
 
             last_state =predictedResult;
 
-            if(continous_count == 0){
+            if (label_continous_count[index] < threshold[index]){
                 predictedResult =IDLE;
             }
 
-            if (predictedResult .equals("Speak"))
-                speack_count ++;
-            else
-                speack_count=0;
 
-            if (predictedResult.equals("Speak")){
-                if (speack_count <6){
-                    predictedResult =IDLE;
-                }
-            }
-
-            if (predictedResult .equals("Chew"))
-                chew_count ++;
-            else
-                chew_count=0;
-
-            if (predictedResult.equals("Chew")){
-                if (chew_count <6){
-                    predictedResult =IDLE;
-                }
-            }
+//
+//            if(continous_count == 0){
+//                predictedResult =IDLE;
+//            }
+//
+//            if (predictedResult .equals("Speak"))
+//                speack_count ++;
+//            else
+//                speack_count=0;
+//
+//            if (predictedResult.equals("Speak")){
+//                if (speack_count <6){
+//                    predictedResult =IDLE;
+//                }
+//            }
+//
+//            if (predictedResult .equals("Chew"))
+//                chew_count ++;
+//            else
+//                chew_count=0;
+//
+//            if (predictedResult.equals("Chew")){
+//                if (chew_count <6){
+//                    predictedResult =IDLE;
+//                }
+//            }
 
 
             if (!predictedResult.equals(IDLE)){
                 last_time = maps.size();
-
             }
 
             runOnUiThread(()->{
                 tvPrediction.setText(predictedResult);
-
             });
 
 
