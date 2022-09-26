@@ -123,7 +123,11 @@ public class SampleBtActivity
     private String food= IDLE;
 
     private int count =0;
-    private int speack_count;
+    private int speack_count=0;
+    private int chew_count=0;
+    private int continous_count=0;
+    private int last_time=0;
+    private int[] label_continous_count = new int[]{0,0,0,0,0,0,0};
     private WaveView accWaveView1;
     private WaveView accWaveView2;
     private WaveView accWaveView3;
@@ -227,7 +231,7 @@ public class SampleBtActivity
         if (count > data_len/20 + 10){
             count=0;
         }
-        if (count== 10 & inputData[0].size()>=data_len){
+        if (count> 3 & inputData[0].size()>=data_len & (maps.size() - last_time)>30){
 
 
             Tensor input = Tensor.fromBlob(integrateArray(inputData) ,new long[]{1,input_channel,20,19});
@@ -253,8 +257,22 @@ public class SampleBtActivity
             if (predictedResult .equals("Hamburg") | predictedResult.equals("Nuggets")){
                 food = predictedResult;
             }
-            Log.d("SPEAK_COUNT", String.valueOf(speack_count));
+//            Log.d("SPEAK_COUNT", String.valueOf(speack_count));
 
+
+
+
+            if (predictedResult.equals(last_state)){
+                label_continous_count[indexOf(labels,predictedResult)]++;
+            }else {
+                label_continous_count = new int[]{0,0,0,0,0,0,0};
+            }
+
+            last_state =predictedResult;
+
+            if(continous_count == 0){
+                predictedResult =IDLE;
+            }
 
             if (predictedResult .equals("Speak"))
                 speack_count ++;
@@ -262,33 +280,68 @@ public class SampleBtActivity
                 speack_count=0;
 
             if (predictedResult.equals("Speak")){
-                if (speack_count <3){
+                if (speack_count <6){
                     predictedResult =IDLE;
                 }
             }
 
-            if (!predictedResult.equals(last_state)){
-//               if(last_state.equals("Hamburg") | last_state.equals("Nuggets")){
-////                   if(predictedResult.equals("Chew")){
-////
-////                   }
-////                   predictedResult = "Chew";
-//               }
-               if( (last_state.equals(IDLE)) | predictedResult.equals(IDLE))
-               {
-               }
+            if (predictedResult .equals("Chew"))
+                chew_count ++;
+            else
+                chew_count=0;
 
-               else {
-                   predictedResult = last_state;
-               }
+            if (predictedResult.equals("Chew")){
+                if (chew_count <6){
+                    predictedResult =IDLE;
+                }
             }
 
 
+            if (!predictedResult.equals(IDLE)){
+                last_time = maps.size();
+
+            }
+
+            runOnUiThread(()->{
+                tvPrediction.setText(predictedResult);
+
+            });
 
 
-            last_state =predictedResult;
+//            if (predictedResult .equals("Speak"))
+//                speack_count ++;
+//            else
+//                speack_count=0;
+//
+//            if (predictedResult.equals("Speak")){
+//                if (speack_count <3){
+//                    predictedResult =IDLE;
+//                }
+//            }
+//
+//            if (!predictedResult.equals(last_state)){
+////               if(last_state.equals("Hamburg") | last_state.equals("Nuggets")){
+//////                   if(predictedResult.equals("Chew")){
+//////
+//////                   }
+//////                   predictedResult = "Chew";
+////               }
+//               if( (last_state.equals(IDLE)) | predictedResult.equals(IDLE))
+//               {
+//               }
+//
+//               else {
+//                   predictedResult = last_state;
+//               }
+//            }
+
+
+
+
+
 //            inputData = new float[data_len *6];
             count=0;
+
 
         }
 
@@ -299,8 +352,8 @@ public class SampleBtActivity
                 tvDataCount.setText(getString(R.string.sensor_data, maps.size()));
             }
 
+//            tvPrediction.setText(predictedResult);
 
-            tvPrediction.setText(predictedResult);
 //            simpleAdapter.notifyDataSetChanged();
 
         });
@@ -690,6 +743,14 @@ public class SampleBtActivity
         input.addLast(element);
     }
 
+    private int indexOf(String[] list, String element){
+        for(int i =0; i <list.length; i++){
+            if (element.equals(list[i])){
+                return i;
+            }
+        }
+        return -1;
+    }
 
     private  float[] integrateArray(ArrayDeque<Float>[] list){
         ArrayDeque<Float> res= new ArrayDeque<>();
