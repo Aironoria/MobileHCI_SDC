@@ -117,9 +117,10 @@ public class SampleBtActivity
     };
 
     private Module model;
+    private final String IDLE = "Idle";
     private String predictedResult;
-    private String last_state = "Nothing";
-    private String food= "Nothing";
+    private String last_state = IDLE;
+    private String food= IDLE;
 
     private int count =0;
     private WaveView accWaveView1;
@@ -128,6 +129,8 @@ public class SampleBtActivity
     private WaveView gyroWaveView1;
     private WaveView gyroWaveView2;
     private WaveView gyroWaveView3;
+
+    private int input_channel;
 
 
 
@@ -184,8 +187,8 @@ public class SampleBtActivity
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         try {
-            model = LiteModuleLoader.load(assetFilePath(this, "data_24_edge_output_converted_augmented.ptl"));
-
+            model = LiteModuleLoader.load(assetFilePath(this, "data_26_augmented_90%.ptl"));
+            input_channel =6;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -221,13 +224,13 @@ public class SampleBtActivity
         maps.add(0, map);
 //60  ; 12
         Log.d("COUNT", String.valueOf(inputData[0].size()) + "  "+ String.valueOf(count));
-        if (count > data_len/20){
+        if (count > data_len/20 + 10){
             count=0;
         }
-        if (count== 10 & inputData[0].size()>=data_len){
+        if (count== 5 & inputData[0].size()>=data_len){
 
 
-            Tensor input = Tensor.fromBlob(integrateArray(inputData) ,new long[]{1,6,20,19});
+            Tensor input = Tensor.fromBlob(integrateArray(inputData) ,new long[]{1,input_channel,20,19});
             float[] a = input.getDataAsFloatArray();
             final Tensor outputTensor = model.forward(IValue.from(input)).toTensor();
             // getting tensor content as java array of floats
@@ -244,12 +247,15 @@ public class SampleBtActivity
             }
 
 //            String[]  labels = {"Water", "Chip", "Hamburg", "Nothing", "TripleClick", "DoubleClick"};
-            String[]  labels = {"Nuggets", "Hamburg","Nothing","Chew","Grind","DoubleClick"};
+            String[]  labels = {"Nuggets", "Speak","Hamburg",IDLE,"Chew","Grind","DoubleClick"};
             predictedResult = labels[maxScoreIdx];
 
             if (predictedResult .equals("Hamburg") | predictedResult.equals("Nuggets")){
                 food = predictedResult;
             }
+
+            if (predictedResult .equals("Speak"))
+                predictedResult = IDLE;
 
 
             if (!predictedResult.equals(last_state)){
@@ -259,14 +265,17 @@ public class SampleBtActivity
 //                   }
 //                   predictedResult = "Chew";
                }
-               else  if( (last_state.equals("Nothing")) | predictedResult.equals("Nothing"))
+               else  if( (last_state.equals(IDLE)) | predictedResult.equals(IDLE))
                {
                }
 
                else {
-                   predictedResult = last_state;
+//                   predictedResult = last_state;
                }
             }
+
+
+
 
             last_state =predictedResult;
 //            inputData = new float[data_len *6];
@@ -669,17 +678,17 @@ public class SampleBtActivity
         if(input.size() >= data_len){
             input.removeFirst();
         }
-        input.add(element);
+        input.addLast(element);
     }
 
 
     private  float[] integrateArray(ArrayDeque<Float>[] list){
         ArrayDeque<Float> res= new ArrayDeque<>();
-        for (int i = 0; i<list.length; i++){
+        for (int i = 0; i<input_channel; i++){
             res.addAll(list[i]);
         }
         float[] res_array = new float[res.size()];
-        Float[] res_F = res.toArray(new Float[res.size()]);
+        Float[] res_F = res.toArray(new Float[0]);
         for (int i =0; i< res.size();i++){
             res_array[i] = res_F[i];
         }
