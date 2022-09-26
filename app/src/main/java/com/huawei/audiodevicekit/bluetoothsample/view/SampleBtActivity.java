@@ -123,6 +123,7 @@ public class SampleBtActivity
     private String food= IDLE;
 
     private int count =0;
+    private int speack_count;
     private WaveView accWaveView1;
     private WaveView accWaveView2;
     private WaveView accWaveView3;
@@ -223,11 +224,10 @@ public class SampleBtActivity
         processDataTest(sensorData);
         maps.add(0, map);
 //60  ; 12
-        Log.d("COUNT", String.valueOf(inputData[0].size()) + "  "+ String.valueOf(count));
         if (count > data_len/20 + 10){
             count=0;
         }
-        if (count== 5 & inputData[0].size()>=data_len){
+        if (count== 10 & inputData[0].size()>=data_len){
 
 
             Tensor input = Tensor.fromBlob(integrateArray(inputData) ,new long[]{1,input_channel,20,19});
@@ -253,24 +253,33 @@ public class SampleBtActivity
             if (predictedResult .equals("Hamburg") | predictedResult.equals("Nuggets")){
                 food = predictedResult;
             }
+            Log.d("SPEAK_COUNT", String.valueOf(speack_count));
+
 
             if (predictedResult .equals("Speak"))
-                predictedResult = IDLE;
+                speack_count ++;
+            else
+                speack_count=0;
 
+            if (predictedResult.equals("Speak")){
+                if (speack_count <3){
+                    predictedResult =IDLE;
+                }
+            }
 
             if (!predictedResult.equals(last_state)){
-               if(last_state.equals("Hamburg") | last_state.equals("Nuggets")){
-//                   if(predictedResult.equals("Chew")){
-//
-//                   }
-//                   predictedResult = "Chew";
-               }
-               else  if( (last_state.equals(IDLE)) | predictedResult.equals(IDLE))
+//               if(last_state.equals("Hamburg") | last_state.equals("Nuggets")){
+////                   if(predictedResult.equals("Chew")){
+////
+////                   }
+////                   predictedResult = "Chew";
+//               }
+               if( (last_state.equals(IDLE)) | predictedResult.equals(IDLE))
                {
                }
 
                else {
-//                   predictedResult = last_state;
+                   predictedResult = last_state;
                }
             }
 
