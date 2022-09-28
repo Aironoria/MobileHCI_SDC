@@ -1,3 +1,3 @@
 package com.huawei.audiodevicekit.bluetoothsample.data;
 
-public enum Label{Nothing, Hamburg, Chip, Water,DoubleClick,Click,TripleClick }
+public enum Label{Idle, Hamburg, Chip, Water,DoubleClick,Click,TripleClick }

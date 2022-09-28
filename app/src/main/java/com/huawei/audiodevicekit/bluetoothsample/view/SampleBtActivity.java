@@ -100,7 +100,7 @@ public class SampleBtActivity
     private TextView tvPrediction;
     private String fileSuffix = "";
 
-    private String label = Label.Nothing.name();
+    private String label = Label.Idle.name();
 
     private final String ACC = "ACC";
 
@@ -252,7 +252,7 @@ public class SampleBtActivity
 
 //            String[]  labels = {"Water", "Chip", "Hamburg", "Nothing", "TripleClick", "DoubleClick"};
             String[]  labels =          {"Nuggets", "Speak","Hamburg",IDLE,"Chew","Grind","DoubleClick"};
-            int[] threshold = new int[]{    3      , 6      ,    3    ,  2 ,  5,      4  ,    4 };
+            int[] threshold = new int[]{    2     , 6      ,    2    ,  2 ,  5,      4  ,    4 };
             predictedResult = labels[maxScoreIdx];
 
 
